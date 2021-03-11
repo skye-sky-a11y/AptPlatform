@@ -58,15 +58,15 @@ export const constantRoutes = [
     path: '/shujucaiji',
     component: Layout,
     redirect: '/shujucaiji/shujuzhanshi',
-    name: 'Shujuzhanshi',
+    name: 'Shujucaiji',
     meta: { title: '数据采集', icon: 'list' },
     alwaysShow: true,
     children: [
       {
-        path: 'shujuyasuo',
-        name: 'shujuyasuo',
-        component: () => import('@/views/shujuzhanshi/index'),
-        meta: { title: '数据展示', icon: 'chart' }
+        path: 'shujuzhanshi',
+        name: 'shujuzhanshi',
+        component: () => import('@/views/shujucaiji/index'),
+        meta: { title: '数据采集', icon: 'chart' }
       }
     ]
   },
