@@ -66,7 +66,13 @@ export const constantRoutes = [
         path: 'shujuzhanshi',
         name: 'shujuzhanshi',
         component: () => import('@/views/shujucaiji/index'),
-        meta: { title: '数据展示', icon: 'chart' }
+        meta: { title: '数据展示', icon: 'form' }
+      },
+      {
+        path: 'jiandanruqinjiance',
+        name: 'jiandanruqinjiance',
+        component: () => import('@/views/jiandanruqinjiance/index'),
+        meta: { title: '简单入侵检测', icon: 'lock' }
       }
     ]
   },
