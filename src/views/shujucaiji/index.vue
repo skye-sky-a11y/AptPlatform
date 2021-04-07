@@ -217,13 +217,13 @@
         class-name="small-padding fixed-width"
       >
         <template slot-scope="{row,$index}">
-          <el-button
+          <!-- <el-button
             type="primary"
             size="mini"
             @click="handleUpdate(row)"
           >
             Edit
-          </el-button>
+          </el-button> -->
           <el-button
             v-if="row.status!='deleted'"
             size="mini"
@@ -371,7 +371,7 @@ import {
 import waves from "@/directive/waves" // waves directive
 
 import Pagination from "@/components/Pagination" // secondary package based on el-pagination
-
+import permission from '@/directive/permission/index.js' // 权限判断指令
 const calendarTypeOptions = [
   { key: "CN", display_name: "China" },
   { key: "US", display_name: "USA" },
@@ -387,6 +387,7 @@ const calendarTypeKeyValue = calendarTypeOptions.reduce((acc, cur) => {
 
 export default {
   name: "ComplexTable",
+  directives: { permission },
   components: { Pagination },
   directives: { waves },
   filters: {
@@ -462,9 +463,8 @@ export default {
     getList() {
       this.listLoading = true
       fetchList(this.listQuery).then((response) => {
-        this.list = response.data.infos
-        this.total = response.data.total
-        console.log(this.list)
+        this.list = response.infos
+        this.total = response.total
         // Just to simulate the time of the request
         setTimeout(() => {
           this.listLoading = false

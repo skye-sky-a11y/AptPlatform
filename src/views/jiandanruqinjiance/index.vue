@@ -81,6 +81,7 @@
 </template>
 
 <script>
+import { attack_info } from '@/api/user'
 export default {
   data() {
     return {
@@ -150,14 +151,21 @@ export default {
   //   }
   // }
   getList() {
-    var vm = this
-    this.axios({
-      method: 'GET',
-      url: 'http://127.0.0.1:5000/api/attack_log'
-    }).then(function(resp) {
-      vm.list = resp.data.info
-      console.log(resp)
-    })
+    // var vm = this
+    // this.axios({
+    //   method: 'GET',
+    //   url: 'http://127.0.0.1:5000/api/attack_log'
+    // }).then(function(resp) {
+    //   vm.list = resp.data.info
+    //   console.log(resp)
+    // })
+    attack_info().then((response) => {
+        this.list = response.info
+        // Just to simulate the time of the request
+        setTimeout(() => {
+          this.listLoading = false
+        }, 1.5 * 1000)
+      })
   },
 }
 }
