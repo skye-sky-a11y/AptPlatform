@@ -9,13 +9,26 @@ let base = 'http://127.0.0.1:5000/api';
 //   })
 // }
 
-export const fetchList = params => {
-  return axios.get(`${base}/users/listpage`, { params: params });
+// export const fetchList = params => {
+//   return axios.get(`${base}/users/listpage`, { params: params });
+// }
+export function fetchList(data) {
+  return request({
+    url: `${base}/users/listpage`,
+    method: 'get',
+    params: data
+  })
 }
-
-export const delete_once = params => {
-  return axios.get(`${base}/delete_once`, { params: params });
+export function delete_once(data) {
+  return request({
+    url: `${base}/delete_once`,
+    method: 'get',
+    params: data
+  })
 }
+// export const delete_once = params => {
+//   return axios.get(`${base}/delete_once`, { params: params });
+// }
 export function fetchArticle(id) {
   return request({
     url: '/vue-element-admin/article/detail',

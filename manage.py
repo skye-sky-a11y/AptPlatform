@@ -16,9 +16,7 @@ from sqlalchemy.sql import text
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import BadSignature, SignatureExpired
 from passlib.apps import custom_app_context
-import time
-import base64
-import hmac
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
@@ -155,14 +153,20 @@ def verify_password(name_or_token, password):
         if not admin or not admin.verify_password(password):
             return False
     g.admin = admin
+    print(g.admin.name)
     return True
 
 
 @app.route('/api/login', methods=['POST'])
 @auth.login_required
 def get_auth_token():
+
     token = g.admin.generate_auth_token()
-    return jsonify({'code': 200, 'msg': "登录成功", 'token': token.decode('ascii'), 'name': g.admin.name})
+    token = {
+        'token': token
+    }
+    return jsonify({'code': 20000, 'data': token,'name': g.admin.name})
+    # return jsonify({'code': 20000, 'msg': "登录成功", 'token': token.decode('ascii'), 'name': g.admin.name})
 
 
 @app.route('/api/setpwd', methods=['POST'])
@@ -178,6 +182,7 @@ def set_auth_pwd():
 
 
 @app.route('/api/users/listpage', methods=['GET'])
+@auth.login_required
 def get_user_list():
     page_size = request.args.get('limit', 20, type=int)
     page = request.args.get('page', 1, type=int)
@@ -197,7 +202,7 @@ def get_user_list():
     else:
         Infos = Infos.offset((page - 1) * page_size).limit(page_size).all()
     return jsonify({
-        'code': 200,
+        'code': 20000,
         'total': total,
         'page_size': page_size,
         'infos': [u.to_dict() for u in Infos]
@@ -205,17 +210,65 @@ def get_user_list():
 
 
 @app.route('/api/hostInfo', methods=['GET'])
+@auth.login_required
 def get_hostInfo():
     f1 = open("out.json")
     hostinfo = get_host_info(f1.readlines())
     f1.close()
     return jsonify({
-        'code': 200,
+        'code': 20000,
         'infos': hostinfo
     })
 
 
+@app.route('/api/userinfo', methods=['GET'])
+@auth.login_required
+def get_userInfo():
+    token = request.args.get('token', '')
+    users = {
+        'admin': {
+            'roles': ['admin'],
+            'introduction': 'I am a super administrator',
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+            'name': 'Super Admin'
+        },
+        'editor': {
+            'roles': ['editor'],
+            'introduction': 'I am an editor',
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+            'name': 'Normal Editor'
+        }
+    }
+    admin = Admin.verify_auth_token(token)
+    if admin:
+        if admin.name == 'admin':
+            infos = users['admin']
+            print(infos)
+        else:
+            infos = users['editor']
+        print(infos)
+        return jsonify({
+            'code': 20000,
+            'data': infos
+        })
+    else:
+        return jsonify({
+            'code': 50000,
+            'data': 'something wrong'
+        })
+
+
+# @app.route('/api/login', methods=['POST'])
+# def login():
+#     data = json.loads(request.get_data(as_text=True))
+#     token={
+#         'token': 'admin-token'
+#     }
+#     return jsonify({'code': 20000,'data': token})
+
+
 @app.route('/api/delete_once', methods=['GET'])
+@auth.login_required
 def delete_once():
     try:
         delete_id = request.args.get('delete_id')
@@ -236,6 +289,7 @@ def delete_once():
 
 
 @app.route('/api/attack_log', methods=['GET'])
+@auth.login_required
 def get_attack_log():
     try:
         return jsonify({
@@ -274,14 +328,20 @@ def get_host_info(lines):  # 获取主机信息
 
 
 def add_all(data):
-    hostinfos = []
-    for i in data:
-        # print(i)
-        hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
-                                   absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
-    # print(hostinfos)
-    db.session.add_all(hostinfos)
-    db.session.commit()
+    try:
+        hostinfos = []
+        for i in data:
+            # print(i)
+            hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
+                                    absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
+        # print(hostinfos)
+        db.session.add_all(hostinfos)
+        admin = Admin(name='admin',password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')
+
+        db.session.add(admin)
+        db.session.commit()
+    except Exception as e:
+        print("add fail")
 
 
 def timeStamp(timeNum):		# 输入毫秒级的时间，转出正常格式的时间
@@ -376,7 +436,8 @@ if __name__ == '__main__':
                 # print(cjson.get_json_value(m,'PRINCIPAL_LOCAL'))
                 if cjson.isExtend(m, 'baseObject') == True:
                     if cjson.isExtend(m, 'path') == True and m['datum']['baseObject']['properties']['path']:
-                            path.append(m['datum']['baseObject']['properties']['path'])
+                        path.append(m['datum']['baseObject']
+                                    ['properties']['path'])
 
                 elif log_info['timestampNanos'] == 0:
                     if cjson.isExtend(m, 'timestampNanos') == True:
