@@ -16,7 +16,6 @@ export function login(data) {
 //     params: { token }
 //   })
 // }
-<<<<<<< HEAD
 export function attack_info(data) {
   return request({
     url: `${base}/attack_log`,
@@ -25,8 +24,7 @@ export function attack_info(data) {
     params: {data}
   })
 }
-=======
->>>>>>> 63dfc8db1d33b65b45b0c7e027f643ea00a18e36
+
 export function getInfo(token) {
   return request({
     url: `${base}/userinfo`,
