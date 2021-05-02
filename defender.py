@@ -9,18 +9,17 @@ class Defender:
         self.rules = []
 
     def init_rules(self):
-        self.rules += rules.attack_rules.get('pty_shell')
-        self.rules += rules.attack_rules.get('clear_log')
-        self.rules += rules.attack_rules.get('Privilege Escalation')
+        for key,values in rules.attack_rules.items():
+            self.rules +=  rules.attack_rules.get(key)
 
     def compare_rule(self, rule, cmdLine):
         if rule.get('regex'):
             if re.match(rule.get('regex'), cmdLine):
                 # print(rule)
-                return rule.get('type')
+                return rule.get('type_info')
 
         elif rule.get('cmdLine') and re.match(rule.get('cmdLine'), cmdLine):
-            return rule.get('type')
+            return rule.get('type_info')
         else:
             return
 

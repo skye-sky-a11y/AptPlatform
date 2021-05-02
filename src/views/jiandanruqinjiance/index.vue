@@ -151,14 +151,6 @@ export default {
   //   }
   // }
   getList() {
-    // var vm = this
-    // this.axios({
-    //   method: 'GET',
-    //   url: 'http://127.0.0.1:5000/api/attack_log'
-    // }).then(function(resp) {
-    //   vm.list = resp.data.info
-    //   console.log(resp)
-    // })
     attack_info().then((response) => {
         this.list = response.info
         // Just to simulate the time of the request
@@ -170,36 +162,3 @@ export default {
 }
 }
 </script>
-// <style lang="scss" scoped>
-// .home_wrap{
-//   width: 100%;
-//   height: 100%;
-//   .pdf_down{
-//     position:fixed;
-//     display: flex;
-//     z-index: 20;
-//     right:26px;
-//     bottom:7%;
-//     .pdf_set_left{
-//       width: 30px;
-//       height: 40px;
-//       color: #408FFF;
-//       font-size: 11px;
-//       padding-top:25px;
-//       text-align: center;
-//       margin-right: 5px;
-//       cursor: pointer;
-//     }
-//     .pdf_set_middle{
-//       width: 30px;
-//       height: 40px;
-//       color: #408FFF;
-//       font-size: 11px;
-//       padding-top:25px;
-//       text-align: center;
-//       margin-right: 5px;
-//       cursor: pointer;
-//     }
-//   }
-// }
-// </style>

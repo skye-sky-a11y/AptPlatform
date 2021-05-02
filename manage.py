@@ -35,11 +35,15 @@ auth = HTTPBasicAuth()
 CSRF_ENABLED = True
 app.debug = True
 app.config['JSON_AS_ASCII'] = False
+
 f = open("out.json")
 attack_log = []
 
 
 class hostInfos(db.Model):
+    '''
+    主机信息映射类
+    '''
     __tablename__ = 'hostInfos'
     id = db.Column(db.Integer, primary_key=True)
     timestampNanos = db.Column(db.String(64))
@@ -53,6 +57,7 @@ class hostInfos(db.Model):
     userId = db.Column(db.Text(2000))
     groupIds = db.Column(db.Text(2000))
 
+    #获取主机信息
     def to_dict(self):
         columns = self.__table__.columns.keys()
         result = {}
@@ -63,6 +68,9 @@ class hostInfos(db.Model):
 
 
 class Admin(db.Model):
+    '''
+    管理员表
+    '''
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), index=True)
@@ -96,6 +104,9 @@ class Admin(db.Model):
 
 
 class checkJSON(object):
+    '''
+    遍历json所有key
+    '''
     def getKeys(self, data):
         keysAll_list = []
 
@@ -136,12 +147,8 @@ class checkJSON(object):
         # key的值不为空字符串或者为empty（用例中空固定写为empty）返回对应值，否则返回empty
 
         return key_value
-# name: /[\u4e00-\u9fa5]/
-# phone: /^1[34578]\d{9}$/
-# class: /[a-zA-Z0-9_\u4e00-\u9fa5]+/
-# email: /^\w+@\w+\.\w+$/
 
-
+#验证password
 @auth.verify_password
 def verify_password(name_or_token, password):
     if not name_or_token:
@@ -156,7 +163,7 @@ def verify_password(name_or_token, password):
     print(g.admin.name)
     return True
 
-
+#登录api
 @app.route('/api/login', methods=['POST'])
 @auth.login_required
 def get_auth_token():
@@ -165,7 +172,7 @@ def get_auth_token():
     token = {
         'token': token
     }
-    return jsonify({'code': 20000, 'data': token,'name': g.admin.name})
+    return jsonify({'code': 20000, 'data': token, 'name': g.admin.name})
     # return jsonify({'code': 20000, 'msg': "登录成功", 'token': token.decode('ascii'), 'name': g.admin.name})
 
 
@@ -243,10 +250,8 @@ def get_userInfo():
     if admin:
         if admin.name == 'admin':
             infos = users['admin']
-            print(infos)
         else:
             infos = users['editor']
-        print(infos)
         return jsonify({
             'code': 20000,
             'data': infos
@@ -333,10 +338,11 @@ def add_all(data):
         for i in data:
             # print(i)
             hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
-                                    absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
+                                       absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
         # print(hostinfos)
         db.session.add_all(hostinfos)
-        admin = Admin(name='admin',password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')
+        admin = Admin(
+            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')
 
         db.session.add(admin)
         db.session.commit()
@@ -360,20 +366,19 @@ def list_dict_duplicate_removal(data):  # 去重 list
 #     return reduce(lambda x, y: (x << 8) + y, byte)
 
 
-if __name__ == '__main__':
-
+def analyse(f, attack_log):
     db.drop_all()
     num = 1
     lines = f.readlines()
     f.close()
     total_log = []
-    stop = 0
     for i in lines[1:]:
 
         t = json.loads(i)
         path = []
         log_info = {
             'timestampNanos': '',
+            'ppid': '',
             'cmdLine': '',
             'pid': '',
             'pname': '',
@@ -393,11 +398,6 @@ if __name__ == '__main__':
             log_info['timestampNanos'] = timeStamp(
                 t['datum']['startTimestampNanos']/1000000) if t['datum']['startTimestampNanos'] != 0 else 0
             log_info['cmdLine'] = t['datum']['cmdLine'] or ''
-            # if t['datum']['properties']['ppid'] == '1':
-            #     print(num)
-            #     print(i)
-            #     continue
-            log_info['pid'] = t['datum']['properties']['ppid']
             log_info['pname'] = t['datum']['properties']['name']
             if 'cwd' in lis:
                 log_info['cwd'] = t['datum']['properties']['cwd']
@@ -407,10 +407,10 @@ if __name__ == '__main__':
             log_info['hostName'] = get_host_info(lines)['hostName']
             log_info['hostip'] = get_host_info(lines)['ips'][0]
             for n in lines[-(len(lines)-num+1)::-1]:
-                # print(len(lines)-num+1)
+
                 n = json.loads(n)
 
-                if cjson.isExtend(n, 'sequence') == True:
+                if cjson.isExtend(n, 'sequence') == True and log_info['timestampNanos'] == 0:
 
                     log_info['timestampNanos'] = timeStamp(
                         n['datum']['timestampNanos']/1000000)
@@ -419,14 +419,13 @@ if __name__ == '__main__':
                         if n['datum']['predicateObjectPath']:
                             path.append(n['datum']['predicateObjectPath'])
 
-                    # print(log_info['timestampNanos'])
-
-                    break
-
                 elif 'PRINCIPAL_LOCAL' in cjson.get_json_value(n, 'type'):
                     log_info['userId'] = cjson.get_json_value(n, 'userId')[0]
                     log_info['groupIds'] = str(
                         cjson.get_json_value(n, 'groupIds')[0])
+                elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
+                    log_info['pid'] = n['datum']['baseObject']['properties']['pid']
+                    break
 
                 # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
                 #     print(n)
@@ -457,7 +456,6 @@ if __name__ == '__main__':
 
         num = num + 1
     total_log = list_dict_duplicate_removal(total_log)
-
     for i in total_log:
         attack_info = {
             'pid': '',
@@ -486,4 +484,8 @@ if __name__ == '__main__':
                 attack_log.append(attack_info)
     db.create_all()
     add_all(total_log)
+
+if __name__ == '__main__':
+
+    analyse(f, attack_log)
     app.run(host='0.0.0.0')
