@@ -172,7 +172,11 @@ def get_auth_token():
     token = {
         'token': token
     }
+<<<<<<< HEAD
     return jsonify({'code': 20000, 'data': token, 'name': g.admin.name})
+=======
+    return jsonify({'code': 20000, 'data': token,'name': g.admin.name})
+>>>>>>> 63dfc8db1d33b65b45b0c7e027f643ea00a18e36
     # return jsonify({'code': 20000, 'msg': "登录成功", 'token': token.decode('ascii'), 'name': g.admin.name})
 
 
@@ -264,6 +268,46 @@ def get_userInfo():
         })
 
 
+<<<<<<< HEAD
+=======
+@app.route('/api/userinfo', methods=['GET'])
+@auth.login_required
+def get_userInfo():
+    token = request.args.get('token', '')
+    users = {
+        'admin': {
+            'roles': ['admin'],
+            'introduction': 'I am a super administrator',
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+            'name': 'Super Admin'
+        },
+        'editor': {
+            'roles': ['editor'],
+            'introduction': 'I am an editor',
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+            'name': 'Normal Editor'
+        }
+    }
+    admin = Admin.verify_auth_token(token)
+    if admin:
+        if admin.name == 'admin':
+            infos = users['admin']
+            print(infos)
+        else:
+            infos = users['editor']
+        print(infos)
+        return jsonify({
+            'code': 20000,
+            'data': infos
+        })
+    else:
+        return jsonify({
+            'code': 50000,
+            'data': 'something wrong'
+        })
+
+
+>>>>>>> 63dfc8db1d33b65b45b0c7e027f643ea00a18e36
 # @app.route('/api/login', methods=['POST'])
 # def login():
 #     data = json.loads(request.get_data(as_text=True))
@@ -272,7 +316,11 @@ def get_userInfo():
 #     }
 #     return jsonify({'code': 20000,'data': token})
 
+<<<<<<< HEAD
 #删除一条日志信息
+=======
+
+>>>>>>> 63dfc8db1d33b65b45b0c7e027f643ea00a18e36
 @app.route('/api/delete_once', methods=['GET'])
 @auth.login_required
 def delete_once():
@@ -337,11 +385,21 @@ def add_all(data):
     try:
         hostinfos = []
         for i in data:
+<<<<<<< HEAD
             hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
                                        absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
         db.session.add_all(hostinfos)
         admin = Admin(
             name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/') #密码passw0rd
+=======
+            # print(i)
+            hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
+                                    absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
+        # print(hostinfos)
+        db.session.add_all(hostinfos)
+        admin = Admin(name='admin',password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')
+
+>>>>>>> 63dfc8db1d33b65b45b0c7e027f643ea00a18e36
         db.session.add(admin)
         db.session.commit()
     except Exception as e:
