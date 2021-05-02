@@ -42,7 +42,7 @@ attack_log = []
 
 class hostInfos(db.Model):
     '''
-    主机信息映射类
+    日志信息映射类
     '''
     __tablename__ = 'hostInfos'
     id = db.Column(db.Integer, primary_key=True)
@@ -187,7 +187,7 @@ def set_auth_pwd():
     else:
         return jsonify({'code': 500, 'msg': "请检查输入"})
 
-
+#获取数据
 @app.route('/api/users/listpage', methods=['GET'])
 @auth.login_required
 def get_user_list():
@@ -216,6 +216,7 @@ def get_user_list():
     })
 
 
+#获取主机信息
 @app.route('/api/hostInfo', methods=['GET'])
 @auth.login_required
 def get_hostInfo():
@@ -227,7 +228,7 @@ def get_hostInfo():
         'infos': hostinfo
     })
 
-
+#用户信息拉取api
 @app.route('/api/userinfo', methods=['GET'])
 @auth.login_required
 def get_userInfo():
@@ -271,7 +272,7 @@ def get_userInfo():
 #     }
 #     return jsonify({'code': 20000,'data': token})
 
-
+#删除一条日志信息
 @app.route('/api/delete_once', methods=['GET'])
 @auth.login_required
 def delete_once():
@@ -292,7 +293,7 @@ def delete_once():
             'info': "删除失败"
         })
 
-
+#简单的入侵检测结果
 @app.route('/api/attack_log', methods=['GET'])
 @auth.login_required
 def get_attack_log():
@@ -331,19 +332,16 @@ def get_host_info(lines):  # 获取主机信息
         host_info['ips'] = ips
     return host_info
 
-
+#添加日志信息
 def add_all(data):
     try:
         hostinfos = []
         for i in data:
-            # print(i)
             hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
                                        absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
-        # print(hostinfos)
         db.session.add_all(hostinfos)
         admin = Admin(
-            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')
-
+            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/') #密码passw0rd
         db.session.add(admin)
         db.session.commit()
     except Exception as e:
