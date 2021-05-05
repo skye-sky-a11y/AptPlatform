@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+
     <div class="filter-container">
       <el-input
         v-model="listQuery.pid"
@@ -186,6 +187,13 @@
         </template>
       </el-table-column>
     </el-table>
+        <template>
+    <pagination
+      :total="total"
+      :page.sync="listQuery.page"
+      :limit.sync="listQuery.limit"
+      @pagination="getList"/>
+    </template>
 
   </div>
 </template>

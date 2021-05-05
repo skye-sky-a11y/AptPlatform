@@ -17,6 +17,8 @@ class Defender:
             if re.match(rule.get('regex'), cmdLine):
                 # print(rule)
                 return rule.get('type_info')
+            else:
+                return
 
         elif rule.get('cmdLine') and re.match(rule.get('cmdLine'), cmdLine):
             return rule.get('type_info')
