@@ -8,7 +8,6 @@ attack_rules={
         {'cmdLine': "",'type': "清理日志记录",'regex': 'echo > /var/log/secure','type_info':'清除日志记录'},
 
     ],
-
     'Privilege Escalation':[
         {'cmdLine': '','type': '提权','regex': '^dd if=/dev/zero of=(.*) bs=10[m,M] count=10','type_info':'Kernel <= 2.6.17.4 Local Root Exploit'},
         {'cmdLine': '','type': '提权','regex': 'find / -user root -perm -4000 -print 2>/dev/null','type_info':'Suid 提权'},
