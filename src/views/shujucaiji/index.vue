@@ -71,6 +71,18 @@
         </template>
       </el-table-column> -->
       <el-table-column
+        label="父进程id"
+        width="120px"
+      >
+        <!-- <template slot-scope="{row}">
+          <span class="link-type" @click="handleUpdate(row)">{{ row.grade }}</span>
+          <!-- <el-tag>{{ row.type | typeFilter }}</el-tag> -->
+        <template slot-scope="{row}">
+          <span>{{ row.ppid }}</span>
+          <!-- <el-tag>{{ row.type | typeFilter }}</el-tag> -->
+        </template>
+      </el-table-column>
+      <el-table-column
         label="调用程序的命令"
         width="120px"
       >

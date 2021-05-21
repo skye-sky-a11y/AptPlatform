@@ -48,6 +48,7 @@ class hostInfos(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestampNanos = db.Column(db.String(64))
     pid = db.Column(db.Text(2000))
+    ppid = db.Column(db.Text(2000))
     pname = db.Column(db.Text(2000))
     absolute_file_path = db.Column(db.String(64))
     cwd = db.Column(db.String(120))
@@ -57,7 +58,7 @@ class hostInfos(db.Model):
     userId = db.Column(db.Text(2000))
     groupIds = db.Column(db.Text(2000))
 
-    #获取主机信息
+    # 获取主机信息
     def to_dict(self):
         columns = self.__table__.columns.keys()
         result = {}
@@ -107,6 +108,7 @@ class checkJSON(object):
     '''
     遍历json所有key
     '''
+
     def getKeys(self, data):
         keysAll_list = []
 
@@ -148,7 +150,9 @@ class checkJSON(object):
 
         return key_value
 
-#验证password
+# 验证password
+
+
 @auth.verify_password
 def verify_password(name_or_token, password):
     if not name_or_token:
@@ -163,7 +167,9 @@ def verify_password(name_or_token, password):
     print(g.admin.name)
     return True
 
-#登录api
+# 登录api
+
+
 @app.route('/api/login', methods=['POST'])
 @auth.login_required
 def get_auth_token():
@@ -187,7 +193,9 @@ def set_auth_pwd():
     else:
         return jsonify({'code': 500, 'msg': "请检查输入"})
 
-#获取数据
+# 获取数据
+
+
 @app.route('/api/users/listpage', methods=['GET'])
 @auth.login_required
 def get_user_list():
@@ -216,7 +224,7 @@ def get_user_list():
     })
 
 
-#获取主机信息
+# 获取主机信息
 @app.route('/api/hostInfo', methods=['GET'])
 @auth.login_required
 def get_hostInfo():
@@ -228,7 +236,9 @@ def get_hostInfo():
         'infos': hostinfo
     })
 
-#用户信息拉取api
+# 用户信息拉取api
+
+
 @app.route('/api/userinfo', methods=['GET'])
 @auth.login_required
 def get_userInfo():
@@ -272,7 +282,7 @@ def get_userInfo():
 #     }
 #     return jsonify({'code': 20000,'data': token})
 
-#删除一条日志信息
+# 删除一条日志信息
 @app.route('/api/delete_once', methods=['GET'])
 @auth.login_required
 def delete_once():
@@ -293,7 +303,9 @@ def delete_once():
             'info': "删除失败"
         })
 
-#简单的入侵检测结果
+# 简单的入侵检测结果
+
+
 @app.route('/api/attack_log', methods=['GET'])
 @auth.login_required
 def get_attack_log():
@@ -332,17 +344,19 @@ def get_host_info(lines):  # 获取主机信息
         host_info['ips'] = ips
     return host_info
 
-#添加日志信息
+# 添加日志信息
+
+
 def add_all(data):
     try:
         hostinfos = []
         for i in data:
 
-            hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'],
+            hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'], ppid=i['ppid'],
                                        absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
         db.session.add_all(hostinfos)
         admin = Admin(
-            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/') #密码passw0rd
+            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')  # 密码passw0rd
         db.session.add(admin)
         db.session.commit()
     except Exception as e:
@@ -398,6 +412,8 @@ def analyse(f, attack_log):
                 t['datum']['startTimestampNanos']/1000000) if t['datum']['startTimestampNanos'] != 0 else 0
             log_info['cmdLine'] = t['datum']['cmdLine'] or ''
             log_info['pname'] = t['datum']['properties']['name']
+            log_info['pid'] = t['datum']['cid']
+            log_info['ppid'] = t['datum']['properties']['ppid'] or ''
             if 'cwd' in lis:
                 log_info['cwd'] = t['datum']['properties']['cwd']
             else:
@@ -422,9 +438,9 @@ def analyse(f, attack_log):
                     log_info['userId'] = cjson.get_json_value(n, 'userId')[0]
                     log_info['groupIds'] = str(
                         cjson.get_json_value(n, 'groupIds')[0])
-                elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
-                    log_info['pid'] = n['datum']['baseObject']['properties']['pid']
-                    break
+                # elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
+                #     log_info['pid'] = n['datum']['baseObject']['properties']['pid']
+                #     break
 
                 # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
                 #     print(n)
@@ -455,9 +471,11 @@ def analyse(f, attack_log):
 
         num = num + 1
     total_log = list_dict_duplicate_removal(total_log)
+
     for i in total_log:
         attack_info = {
             'pid': '',
+            'ppid': '',
             'pname': '',
             'hostip': '',
             'type_name': '',
@@ -468,6 +486,7 @@ def analyse(f, attack_log):
         if cmdLine:
             hostip = i.get('hostip')
             pid = i.get('pid')
+            ppid = i.get('ppid')
             pname = i.get('pname')
             defender = Defender(cmdLine)
             get_rule = defender.run()
@@ -476,6 +495,7 @@ def analyse(f, attack_log):
                 type_info = get_rule.get('type_info')
                 attack_info['cmdLine'] = cmdLine
                 attack_info['pid'] = pid
+                attack_info['ppid'] = ppid
                 attack_info['pname'] = pname
                 attack_info['hostip'] = hostip
                 attack_info['type_name'] = type_name
@@ -483,6 +503,7 @@ def analyse(f, attack_log):
                 attack_log.append(attack_info)
     db.create_all()
     add_all(total_log)
+
 
 if __name__ == '__main__':
 
