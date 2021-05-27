@@ -14,8 +14,24 @@ attack_rules={
         {'cmdLine': '','type': '提权','regex': 'find / -perm -u=s -type f 2>/dev/null','type_info':'Suid 提权'},
         {'cmdLine': '','type': '提权','regex': "find / -user root -perm -4000 -exec ls -ldb {} \\\\",'type_info':'Suid 提权'},
         {'cmdLine': '','type': '提权','regex': "find / -user root -perm -4000 -print 2>/dev/null",'type_info':'Suid 提权'},
-        {'cmdLine': '','type': '提权','regex': "./LinEnum.sh｜./linux-exploit-suggester-master.sh",'type_info':'Linux提权信息收集'},
-        {'cmdLine': '','type': '提权','regex': "find (.*) -exec /bin/bash -p ;",'type_info':'Suid提权-find'},
+        {'cmdLine': '','type': '提权','regex': "./LinEnum.sh .*|./linux-exploit-suggester-master.sh .*|/bin/bash ./LinEnum.sh .*",'type_info':'Linux提权信息收集'},
+        {'cmdLine': '','type': '提权','regex': "find (.*) -exec /bin/bash -p ;| find (.*) -exec /bin/bash ;",'type_info':'Suid提权-find'},
+
     ],
-    
+    '权限维持':[
+        {'cmdLine': '','type': '计划任务','regex': "crontab .*",'type_info':'计划任务'},
+        {'cmdLine': '','type': '权限维持','regex': "useradd .*",'type_info':'添加用户'},
+    ],
+    '网站打包':[
+        {'cmdLine': '','type': '站点打包','regex': "zip -r .*",'type_info':'打包zip'},
+    ],
+    '查找文件、内容':[
+        {'cmdLine': '','type': 'grep搜索内容','regex': "grep --color=auto -ri .*|grep -ri .* ",'type_info':'grep查找关键字'},
+    ],
+    '内网':[
+        {'cmdLine': '','type': '疑似python反弹shell、pty_shell','regex': "python3 -c .*|python -c .*",'type_info':'python反弹shell、pty_shell交互式命令执行'},
+        {'cmdLine': '','type': 'frp内网代理','regex': "./frpc .*| ./frps .*|sudo ./frpc .*|sudo ./frps .*",'type_info':'frp内网代理'},
+
+    ]
+
 }

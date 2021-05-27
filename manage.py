@@ -73,6 +73,30 @@ class hostInfos(db.Model):
         return result
 
 
+class attackInfos(db.Model):
+    '''
+    日志信息映射类
+    '''
+    __tablename__ = 'attackInfos'
+    id = db.Column(db.Integer, primary_key=True)
+    cmdLine = db.Column(db.String(64))
+    hostip = db.Column(db.Text(2000))
+    pid = db.Column(db.Text(2000))
+    pname = db.Column(db.Text(2000))
+    ppid = db.Column(db.String(64))
+    type_info = db.Column(db.String(120))
+    type_name = db.Column(db.Text(2000))
+
+    # 获取attack信息
+    def to_dict(self):
+        columns = self.__table__.columns.keys()
+        result = {}
+        for key in columns:
+            value = getattr(self, key)
+            result[key] = value
+        return result
+
+
 class Admin(db.Model):
     '''
     管理员表
@@ -229,17 +253,6 @@ def get_user_list():
     })
 
 
-# 获取主机信息
-@app.route('/api/hostInfo', methods=['GET'])
-@auth.login_required
-def get_hostInfo():
-    f1 = open("out.json")
-    hostinfo = get_host_info(f1.readlines())
-    f1.close()
-    return jsonify({
-        'code': 20000,
-        'infos': hostinfo
-    })
 
 # 用户信息拉取api
 
@@ -316,9 +329,11 @@ def delete_once():
 @auth.login_required
 def get_attack_log():
     try:
+        query = db.session.query
+        Infos = query(attackInfos).all()
         return jsonify({
             'code': 20000,
-            'info': attack_log
+            'info': [u.to_dict() for u in Infos]
         })
     except Exception as e:
         return jsonify({
@@ -351,14 +366,6 @@ def get_host_info(lines):  # 获取主机信息
     return host_info
 
 
-def request_one():
-
-    headers={
-        'Accept-Language':'zh-CN,zh;q=0.9'
-    }
-    s = requests.get("http://127.0.0.1:5000/analyse")
-    
-
 # 添加管理员
 
 
@@ -385,6 +392,17 @@ def add_all(data):
         print("add fail")
 
 
+def add_attack(data):
+    # try:
+    attack = attackInfos(
+        pid=data['pid'], ppid=data['ppid'], pname=data['pname'], cmdLine=data['cmdLine'], type_info=data['type_info'], type_name=data['type_name'], hostip=data['hostip']
+    )
+    db.session.add(attack)
+    db.session.commit()
+    # except Exception as e:
+    #     print("add fail")
+
+
 def timeStamp(timeNum):		# 输入毫秒级的时间，转出正常格式的时间
     timeStamp = float(timeNum/1000)
     timeArray = time.localtime(timeStamp)
@@ -403,7 +421,6 @@ def list_dict_duplicate_removal(data):  # 去重 list
 
 def analyse():
     time.sleep(2)
-    num = 1
     total_data = []
     host_data = {}
     # 创建socket
@@ -415,7 +432,6 @@ def analyse():
     tcp_server_socket.listen(128)
     recv_subject_process = False
     host = 0
-    f = open("out1.json","a+")
     while True:
         # 等待新的客户端连接
         client_socket, clientAddr = tcp_server_socket.accept()
@@ -426,8 +442,7 @@ def analyse():
                 total_log = []
                 j = recv_data.decode('gbk')
                 total_data.append(j.strip())
-                f.write(j)
-                f.flush()
+
                 # sys.stdout.write(str(len(total_data))+"\n")
                 cjson = checkJSON()
                 t = json.loads(j.strip())
@@ -438,7 +453,7 @@ def analyse():
                         host = 1
                     except Exception as e:
                         host_data['hostName'] = '未知'
-                        host_data['ips']=['未知']
+                        host_data['ips'] = ['未知']
 
                 if 'SUBJECT_PROCESS' in cjson.get_json_value(t, 'type'):
                     recv_subject_process = True
@@ -465,17 +480,18 @@ def analyse():
                         path.append(t['datum']['predicateObjectPath'])
                     # if log_info['timestampNanos'] == '':
                     #     if cjson.isExtend(t, 'timestampNanos') == True:
-                            # log_info['timestampNanos'] = timeStamp(
-                            #     cjson.get_json_value(t, 'timestampNanos')[0]/1000000)
+                        # log_info['timestampNanos'] = timeStamp(
+                        #     cjson.get_json_value(t, 'timestampNanos')[0]/1000000)
                     # sys.stdout.write(log_info['timestampNanos'])
-                    log_info['timestampNanos'] = timeStamp(cjson.get_json_value(t, 'timestampNanos')[0]/1000000)        
+                    log_info['timestampNanos'] = timeStamp(
+                        cjson.get_json_value(t, 'timestampNanos')[0]/1000000)
 
-                    is_subject_process= False
+                    is_subject_process = False
                     for u in total_data[-(len(total_data)-total_data.index(j.strip()))-1::-1]:
                         u = json.loads(u)
                         if cjson.isExtend(u, 'sequence'):
-                            if  log_info['timestampNanos'] == '':
-    
+                            if log_info['timestampNanos'] == '':
+
                                 log_info['timestampNanos'] = timeStamp(
                                     u['datum']['timestampNanos']/1000000)
                                 # path.append(n['datum']['predicateObjectPath'])
@@ -485,10 +501,11 @@ def analyse():
                                             u['datum']['predicateObjectPath'])
 
                             break
-                        if  cjson.isExtend(u, 'baseObject') == True and is_subject_process == False:
+                        if cjson.isExtend(u, 'baseObject') == True and is_subject_process == False:
                             if cjson.isExtend(u, 'path') == True and u['datum']['baseObject']['properties']['path']:
-                                path.append(u['datum']['baseObject']['properties']['path'])
-                        
+                                path.append(u['datum']['baseObject']
+                                            ['properties']['path'])
+
                         if 'SUBJECT_PROCESS' in cjson.get_json_value(u, 'type'):
                             is_subject_process = True
                             if log_info['timestampNanos'] and u['datum']['startTimestampNanos'] != 0:
@@ -504,27 +521,25 @@ def analyse():
                             log_info['hostName'] = host_data['hostName']
                             log_info['hostip'] = host_data['ips'][0]
 
-
                         if 'PRINCIPAL_LOCAL' in cjson.get_json_value(u, 'type'):
                             log_info['userId'] = cjson.get_json_value(u, 'userId')[
                                 0]
                             log_info['groupIds'] = str(
                                 cjson.get_json_value(u, 'groupIds')[0])
-                                # elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
-                                #     log_info['pid'] = n['datum']['baseObject']['properties']['pid']
-                                #     break
+                            # elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
+                            #     log_info['pid'] = n['datum']['baseObject']['properties']['pid']
+                            #     break
 
-                                # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
-                                #     print(n)
+                            # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
+                            #     print(n)
 
                     log_info['absolute_file_path'] = list(set(path))
 
                     total_log.append(log_info)
 
                     total_log = list_dict_duplicate_removal(total_log)
-                    
-                    add_all(total_log)
 
+                    add_all(total_log)
 
                     attack_info = {
                         'pid': '',
@@ -537,7 +552,7 @@ def analyse():
                     }
                     cmdLine = log_info.get('cmdLine')
                     if cmdLine:
-                        sys.stdout.write(cmdLine)
+
                         hostip = log_info.get('hostip')
                         pid = log_info.get('pid')
                         ppid = log_info.get('ppid')
@@ -554,15 +569,14 @@ def analyse():
                             attack_info['hostip'] = hostip
                             attack_info['type_name'] = type_name
                             attack_info['type_info'] = type_info
+                            add_attack(attack_info)
                             attack_log.append(attack_info)
-
 
             else:
                 break
 
         client_socket.close()
 
-    
     tcp_server_socket.close()
     return "hello"
 
