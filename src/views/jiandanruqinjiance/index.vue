@@ -18,7 +18,7 @@
               {{ scope.row.pid }}
             </template>
           </el-table-column>
-          <el-table-column align="center" label="进程名" width="220">
+          <el-table-column align="center" label="调用程序的命令" width="220">
             <template slot-scope="scope">
               {{ scope.row.pname }}
             </template>

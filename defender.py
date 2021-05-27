@@ -2,6 +2,7 @@ import rules
 import re
 from concurrent.futures import ThreadPoolExecutor
 from concurrent import futures
+import sys
 
 class Defender:
     def __init__(self, cmdLine):
@@ -11,9 +12,9 @@ class Defender:
     def init_rules(self):
         for key,values in rules.attack_rules.items():
             self.rules +=  rules.attack_rules.get(key)
-
     def compare_rule(self, rule, cmdLine):
         if rule.get('regex'):
+
             if re.match(rule.get('regex'), cmdLine):
                 # print(rule)
                 return rule.get('type_info')

@@ -3,6 +3,7 @@
 import rules
 import os
 import re
+import requests
 import json
 import jsonpath
 import time
@@ -16,7 +17,10 @@ from sqlalchemy.sql import text
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import BadSignature, SignatureExpired
 from passlib.apps import custom_app_context
-
+import socket
+import random
+import threading
+import sys
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
@@ -37,6 +41,7 @@ app.debug = True
 app.config['JSON_AS_ASCII'] = False
 
 f = open("out.json")
+global attack_log
 attack_log = []
 
 
@@ -243,6 +248,7 @@ def get_hostInfo():
 @auth.login_required
 def get_userInfo():
     token = request.args.get('token', '')
+    print(token)
     users = {
         'admin': {
             'roles': ['admin'],
@@ -344,7 +350,26 @@ def get_host_info(lines):  # 获取主机信息
         host_info['ips'] = ips
     return host_info
 
-# 添加日志信息
+
+def request_one():
+
+    headers={
+        'Accept-Language':'zh-CN,zh;q=0.9'
+    }
+    s = requests.get("http://127.0.0.1:5000/analyse")
+    
+
+# 添加管理员
+
+
+def init_admin():
+    try:
+        admin = Admin(
+            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')  # 密码passw0rd
+        db.session.add(admin)
+        db.session.commit()
+    except Exception as e:
+        print("add fail")
 
 
 def add_all(data):
@@ -355,9 +380,6 @@ def add_all(data):
             hostinfos.append(hostInfos(timestampNanos=i['timestampNanos'], pid=i['pid'], pname=i['pname'], ppid=i['ppid'],
                                        absolute_file_path=str(i['absolute_file_path']), cwd=i['cwd'], cmdLine=i['cmdLine'], hostName=i['hostName'], hostip=i['hostip'], userId=i['userId'], groupIds=i['groupIds']))
         db.session.add_all(hostinfos)
-        admin = Admin(
-            name='admin', password='$6$rounds=656000$smq9js2whAy2hEJX$4ZClo/lwmoD.z7Ex/qRyJp7fI3tp6ZOEw/CbU2GuZGVx2RrqU9muN./Ri2c04ESWQv/xZcaq1pz5oXgbP2H2Z/')  # 密码passw0rd
-        db.session.add(admin)
         db.session.commit()
     except Exception as e:
         print("add fail")
@@ -379,133 +401,178 @@ def list_dict_duplicate_removal(data):  # 去重 list
 #     return reduce(lambda x, y: (x << 8) + y, byte)
 
 
-def analyse(f, attack_log):
-    db.drop_all()
+def analyse():
+    time.sleep(2)
     num = 1
-    lines = f.readlines()
-    f.close()
-    total_log = []
-    for i in lines[1:]:
+    total_data = []
+    host_data = {}
+    # 创建socket
+    tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        t = json.loads(i)
-        path = []
-        log_info = {
-            'timestampNanos': '',
-            'ppid': '',
-            'cmdLine': '',
-            'pid': '',
-            'pname': '',
-            'absolute_file_path': '',
-            'cwd': '',
-            'hostName': '',
-            'hostip': '',
-            'userId': '',
-            'groupIds': ''
-        }
+    # 本地信息
+    address = ('192.168.1.106', 9091)
+    tcp_server_socket.bind(address)
+    tcp_server_socket.listen(128)
+    recv_subject_process = False
+    host = 0
+    f = open("out1.json","a+")
+    while True:
+        # 等待新的客户端连接
+        client_socket, clientAddr = tcp_server_socket.accept()
+        while True:
+            # 接收对方发送过来的数据
+            recv_data = client_socket.recv(2048)  # 接收1024个字节
+            if recv_data:
+                total_log = []
+                j = recv_data.decode('gbk')
+                total_data.append(j.strip())
+                f.write(j)
+                f.flush()
+                # sys.stdout.write(str(len(total_data))+"\n")
+                cjson = checkJSON()
+                t = json.loads(j.strip())
 
-        cjson = checkJSON()
-        lis = cjson.getKeys(t)
+                if host == 0:
+                    try:
+                        host_data = get_host_info(total_data)
+                        host = 1
+                    except Exception as e:
+                        host_data['hostName'] = '未知'
+                        host_data['ips']=['未知']
 
-        # try:
-        if 'SUBJECT_PROCESS' in cjson.get_json_value(t, 'type'):
-            log_info['timestampNanos'] = timeStamp(
-                t['datum']['startTimestampNanos']/1000000) if t['datum']['startTimestampNanos'] != 0 else 0
-            log_info['cmdLine'] = t['datum']['cmdLine'] or ''
-            log_info['pname'] = t['datum']['properties']['name']
-            log_info['pid'] = t['datum']['cid']
-            log_info['ppid'] = t['datum']['properties']['ppid'] or ''
-            if 'cwd' in lis:
-                log_info['cwd'] = t['datum']['properties']['cwd']
+                if 'SUBJECT_PROCESS' in cjson.get_json_value(t, 'type'):
+                    recv_subject_process = True
+
+                    break
+                if recv_subject_process and cjson.isExtend(t, 'sequence'):
+                    recv_subject_process = False
+                    path = []
+                    lis = cjson.getKeys(t)
+                    log_info = {
+                        'timestampNanos': '',
+                        'ppid': '',
+                        'cmdLine': '',
+                        'pid': '',
+                        'pname': '',
+                        'absolute_file_path': '',
+                        'cwd': '',
+                        'hostName': '',
+                        'hostip': '',
+                        'userId': '',
+                        'groupIds': ''
+                    }
+                    if cjson.isExtend(t, 'predicateObjectPath') == True and t['datum']['predicateObjectPath']:
+                        path.append(t['datum']['predicateObjectPath'])
+                    # if log_info['timestampNanos'] == '':
+                    #     if cjson.isExtend(t, 'timestampNanos') == True:
+                            # log_info['timestampNanos'] = timeStamp(
+                            #     cjson.get_json_value(t, 'timestampNanos')[0]/1000000)
+                    # sys.stdout.write(log_info['timestampNanos'])
+                    log_info['timestampNanos'] = timeStamp(cjson.get_json_value(t, 'timestampNanos')[0]/1000000)        
+
+                    is_subject_process= False
+                    for u in total_data[-(len(total_data)-total_data.index(j.strip()))-1::-1]:
+                        u = json.loads(u)
+                        if cjson.isExtend(u, 'sequence'):
+                            if  log_info['timestampNanos'] == '':
+    
+                                log_info['timestampNanos'] = timeStamp(
+                                    u['datum']['timestampNanos']/1000000)
+                                # path.append(n['datum']['predicateObjectPath'])
+                                if cjson.isExtend(u, 'predicateObjectPath') == True:
+                                    if u['datum']['predicateObjectPath']:
+                                        path.append(
+                                            u['datum']['predicateObjectPath'])
+
+                            break
+                        if  cjson.isExtend(u, 'baseObject') == True and is_subject_process == False:
+                            if cjson.isExtend(u, 'path') == True and u['datum']['baseObject']['properties']['path']:
+                                path.append(u['datum']['baseObject']['properties']['path'])
+                        
+                        if 'SUBJECT_PROCESS' in cjson.get_json_value(u, 'type'):
+                            is_subject_process = True
+                            if log_info['timestampNanos'] and u['datum']['startTimestampNanos'] != 0:
+                                log_info['timestampNanos'] = timeStamp(
+                                    u['datum']['startTimestampNanos']/1000000)
+                            log_info['cmdLine'] = u['datum']['cmdLine'] or ''
+                            log_info['pname'] = u['datum']['properties']['name']
+                            log_info['pid'] = u['datum']['cid']
+                            log_info['ppid'] = u['datum']['properties']['ppid'] or ''
+                            if cjson.isExtend(u, 'cwd') == True:
+                                log_info['cwd'] = u['datum']['properties']['cwd']
+
+                            log_info['hostName'] = host_data['hostName']
+                            log_info['hostip'] = host_data['ips'][0]
+
+
+                        if 'PRINCIPAL_LOCAL' in cjson.get_json_value(u, 'type'):
+                            log_info['userId'] = cjson.get_json_value(u, 'userId')[
+                                0]
+                            log_info['groupIds'] = str(
+                                cjson.get_json_value(u, 'groupIds')[0])
+                                # elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
+                                #     log_info['pid'] = n['datum']['baseObject']['properties']['pid']
+                                #     break
+
+                                # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
+                                #     print(n)
+
+                    log_info['absolute_file_path'] = list(set(path))
+
+                    total_log.append(log_info)
+
+                    total_log = list_dict_duplicate_removal(total_log)
+                    
+                    add_all(total_log)
+
+
+                    attack_info = {
+                        'pid': '',
+                        'ppid': '',
+                        'pname': '',
+                        'hostip': '',
+                        'type_name': '',
+                        'type_info': '',
+                        'cmdLine': ''
+                    }
+                    cmdLine = log_info.get('cmdLine')
+                    if cmdLine:
+                        sys.stdout.write(cmdLine)
+                        hostip = log_info.get('hostip')
+                        pid = log_info.get('pid')
+                        ppid = log_info.get('ppid')
+                        pname = log_info.get('pname')
+                        defender = Defender(cmdLine)
+                        get_rule = defender.run()
+                        if get_rule:
+                            type_name = get_rule.get('type')
+                            type_info = get_rule.get('type_info')
+                            attack_info['cmdLine'] = cmdLine
+                            attack_info['pid'] = pid
+                            attack_info['ppid'] = ppid
+                            attack_info['pname'] = pname
+                            attack_info['hostip'] = hostip
+                            attack_info['type_name'] = type_name
+                            attack_info['type_info'] = type_info
+                            attack_log.append(attack_info)
+
+
             else:
-                log_info['cwd'] = ''
+                break
 
-            log_info['hostName'] = get_host_info(lines)['hostName']
-            log_info['hostip'] = get_host_info(lines)['ips'][0]
-            for n in lines[-(len(lines)-num+1)::-1]:
+        client_socket.close()
 
-                n = json.loads(n)
-
-                if cjson.isExtend(n, 'sequence') == True and log_info['timestampNanos'] == 0:
-
-                    log_info['timestampNanos'] = timeStamp(
-                        n['datum']['timestampNanos']/1000000)
-                    # path.append(n['datum']['predicateObjectPath'])
-                    if cjson.isExtend(n, 'predicateObjectPath') == True:
-                        if n['datum']['predicateObjectPath']:
-                            path.append(n['datum']['predicateObjectPath'])
-
-                elif 'PRINCIPAL_LOCAL' in cjson.get_json_value(n, 'type'):
-                    log_info['userId'] = cjson.get_json_value(n, 'userId')[0]
-                    log_info['groupIds'] = str(
-                        cjson.get_json_value(n, 'groupIds')[0])
-                # elif cjson.isExtend(n, 'baseObject') == True and cjson.isExtend(n, 'pid'):
-                #     log_info['pid'] = n['datum']['baseObject']['properties']['pid']
-                #     break
-
-                # if cjson.get_json_value(n,'PRINCIPAL_LOCAL') is not None:
-                #     print(n)
-            for m in lines[num+1:]:
-                m = json.loads(m)
-
-                # print(cjson.get_json_value(m,'PRINCIPAL_LOCAL'))
-                if cjson.isExtend(m, 'baseObject') == True:
-                    if cjson.isExtend(m, 'path') == True and m['datum']['baseObject']['properties']['path']:
-                        path.append(m['datum']['baseObject']
-                                    ['properties']['path'])
-
-                elif log_info['timestampNanos'] == 0:
-                    if cjson.isExtend(m, 'timestampNanos') == True:
-                        log_info['timestampNanos'] = timeStamp(
-                            cjson.get_json_value(m, 'timestampNanos')[0]/1000000)
-
-                elif cjson.isExtend(m, 'sequence') == True:
-                    if cjson.isExtend(m, 'predicateObjectPath') == True and m['datum']['predicateObjectPath']:
-                        path.append(m['datum']['predicateObjectPath'])
-                        break
-                    else:
-                        break
-
-            log_info['absolute_file_path'] = list(set(path))
-
-            total_log.append(log_info)
-
-        num = num + 1
-    total_log = list_dict_duplicate_removal(total_log)
-
-    for i in total_log:
-        attack_info = {
-            'pid': '',
-            'ppid': '',
-            'pname': '',
-            'hostip': '',
-            'type_name': '',
-            'type_info': '',
-            'cmdLine': ''
-        }
-        cmdLine = i.get('cmdLine')
-        if cmdLine:
-            hostip = i.get('hostip')
-            pid = i.get('pid')
-            ppid = i.get('ppid')
-            pname = i.get('pname')
-            defender = Defender(cmdLine)
-            get_rule = defender.run()
-            if get_rule:
-                type_name = get_rule.get('type')
-                type_info = get_rule.get('type_info')
-                attack_info['cmdLine'] = cmdLine
-                attack_info['pid'] = pid
-                attack_info['ppid'] = ppid
-                attack_info['pname'] = pname
-                attack_info['hostip'] = hostip
-                attack_info['type_name'] = type_name
-                attack_info['type_info'] = type_info
-                attack_log.append(attack_info)
-    db.create_all()
-    add_all(total_log)
+    
+    tcp_server_socket.close()
+    return "hello"
 
 
 if __name__ == '__main__':
 
-    analyse(f, attack_log)
-    app.run(host='0.0.0.0')
+    db.drop_all()
+    db.create_all()
+    init_admin()
+    t = threading.Thread(target=analyse)
+    t.start()
+    app.run(host='0.0.0.0', debug=False, threaded=True)
+    t.join()
