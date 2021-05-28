@@ -569,7 +569,6 @@ def analyse():
                             attack_info['type_name'] = type_name
                             attack_info['type_info'] = type_info
                             add_attack(attack_info)
-                            attack_log.append(attack_info)
 
             else:
                 break
