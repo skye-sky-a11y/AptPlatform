@@ -40,9 +40,8 @@ CSRF_ENABLED = True
 app.debug = True
 app.config['JSON_AS_ASCII'] = False
 
-f = open("out.json")
-global attack_log
-attack_log = []
+
+
 
 
 class hostInfos(db.Model):
